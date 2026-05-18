@@ -1,117 +1,228 @@
-# `template-compendium-adapter-dotnet`
+# Compendium.Adapters.LiteLLM
 
-Starter for a new **Compendium** adapter (.NET 9, single-vendor, lives in its own repository).
+[![NuGet](https://img.shields.io/nuget/v/Compendium.Adapters.LiteLLM.svg)](https://www.nuget.org/packages/Compendium.Adapters.LiteLLM)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-Aligns with [ADR 0006](../../docs/adr/0006-multi-repo-adapter-split.md) (split heavy adapters into per-adapter repositories). Encodes the [`compendium-test-author`](.claude/skills/compendium-test-author/SKILL.md) skill so `/tests` and `/coverage` work out of the box.
+`IAIProvider` adapter for the [LiteLLM](https://github.com/BerriAI/litellm) proxy — a
+self-hostable gateway that exposes 100+ LLM providers behind an OpenAI-compatible REST API.
 
-## What you get
+LiteLLM lets you put **one** endpoint in front of OpenAI, Anthropic, Bedrock, Azure OpenAI,
+Vertex / Gemini, Cohere, Mistral, Ollama, and dozens more, plus its own routing primitives:
+budget caps, virtual keys per team, per-model rate limits, semantic caching, and request tagging.
+This adapter speaks that endpoint from `Compendium`.
 
-```
-.
-├── src/Compendium.Adapters.Litellm/        — the adapter project (rename Litellm → <Vendor>)
-│   ├── DependencyInjection/
-│   │   └── ServiceCollectionExtensions.cs
-│   ├── Options/LitellmOptions.cs
-│   └── LitellmAdapter.cs                   — illustrates the IAdapter (or any port) shape
-├── tests/Unit/Compendium.Adapters.Litellm.Tests/
-│   ├── DependencyInjection/ServiceCollectionExtensionsTests.cs
-│   ├── Options/LitellmOptionsTests.cs
-│   └── GlobalUsings.cs
-├── .github/workflows/ci.yml               — build + test + 90% coverage gate
-├── .claude/skills/compendium-test-author/SKILL.md
-├── .claude/commands/{tests,coverage}.md
-├── .config/dotnet-tools.json              — pins ReportGenerator
-├── Directory.Build.props
-├── Directory.Packages.props               — central package management
-├── Compendium.Adapters.Litellm.sln
-├── global.json                            — pins .NET 9 SDK
-└── LICENSE
-```
+## Why LiteLLM (vs OpenRouter, vs direct provider adapters)
 
-## Conventions enforced (copy from Compendium framework)
+| Question | LiteLLM (this adapter) | OpenRouter | Direct adapters |
+|---|---|---|---|
+| Where does the gateway run? | **You host it** (local / k8s) | Vendor-hosted SaaS | No gateway |
+| Cost model | Free + your provider costs | Markup on every token | Provider list price |
+| Virtual keys / team budgets | Yes (built in) | Limited | No |
+| Custom routing / fallbacks | Yes (config-driven) | Limited | No |
+| Egress / data residency control | You own it | Egress via OpenRouter | Direct to provider |
+| Spin-up time | `pip install litellm[proxy]` | Sign up | Per-provider keys |
 
-| Aspect | Choice |
-|---|---|
-| Test framework | xUnit 2.9.3 |
-| Assertions | FluentAssertions 6.12.1 — never `Assert.*` |
-| Mocks | NSubstitute 5.1.0 — never Moq |
-| Coverage | coverlet.collector 6.0.2 + ReportGenerator (local tool) |
-| Result pattern | `Result<T>` from `Compendium.Abstractions` (NuGet) |
-| Async | `async Task` + cancellation tokens — never `Thread.Sleep`, never `.Result` |
-| Test naming | `{SUT}Tests` / `{Method}_{Scenario}_{Expected}` |
-| Test layout | AAA explicit (`// Arrange / // Act / // Assert`) |
-| File header | Sassy Solutions copyright block |
-| HTTP mocking (when applicable) | `RichardSzalay.MockHttp` 7.0.0 |
-| Container fixtures (integration) | `Testcontainers` 4.11.0 + `IAsyncLifetime` + `[RequiresDockerFact]` |
-| CI gate | ≥ 90 % line coverage on the unit-testable surface (DB-bound types may be exempted with documented reason) |
+Pick **this adapter** when you want self-hostable multi-provider routing with first-class observability hooks. Pick `compendium-adapter-openrouter` when you'd rather not host anything yourself. Pick a direct adapter (`compendium-adapter-openai`, `-anthropic`, …) when you need just one provider with no gateway in the path.
 
-## How to scaffold a new adapter
+## Quick start
+
+### 1. Run a LiteLLM proxy
 
 ```bash
-# 1. Pick a vendor name (use PascalCase: Stripe, PostgreSQL, Redis…)
-export VENDOR=Stripe
+pip install "litellm[proxy]"
 
-# 2. Copy the template to a new directory next to your Compendium clone
-cp -r templates/adapter-dotnet ../compendium-adapter-${VENDOR,,}
-cd ../compendium-adapter-${VENDOR,,}
-
-# 3. Find-and-replace placeholders (BSD sed on macOS — adapt for GNU sed)
-find . -type f \( -name '*.cs' -o -name '*.csproj' -o -name '*.sln' -o -name '*.md' -o -name '*.yml' -o -name '*.json' -o -name '*.props' \) -exec sed -i '' -e "s/Litellm/${VENDOR}/g" -e "s/litellm/${VENDOR,,}/g" {} +
-
-# 4. Rename folders/files
-git mv src/Compendium.Adapters.Litellm              src/Compendium.Adapters.${VENDOR}
-git mv src/Compendium.Adapters.${VENDOR}/Compendium.Adapters.Litellm.csproj \
-       src/Compendium.Adapters.${VENDOR}/Compendium.Adapters.${VENDOR}.csproj
-git mv src/Compendium.Adapters.${VENDOR}/LitellmAdapter.cs                   \
-       src/Compendium.Adapters.${VENDOR}/${VENDOR}Adapter.cs
-git mv src/Compendium.Adapters.${VENDOR}/Options/LitellmOptions.cs           \
-       src/Compendium.Adapters.${VENDOR}/Options/${VENDOR}Options.cs
-
-git mv tests/Unit/Compendium.Adapters.Litellm.Tests           tests/Unit/Compendium.Adapters.${VENDOR}.Tests
-git mv tests/Unit/Compendium.Adapters.${VENDOR}.Tests/Compendium.Adapters.Litellm.Tests.csproj \
-       tests/Unit/Compendium.Adapters.${VENDOR}.Tests/Compendium.Adapters.${VENDOR}.Tests.csproj
-git mv tests/Unit/Compendium.Adapters.${VENDOR}.Tests/Options/LitellmOptionsTests.cs \
-       tests/Unit/Compendium.Adapters.${VENDOR}.Tests/Options/${VENDOR}OptionsTests.cs
-
-mv Compendium.Adapters.Litellm.sln Compendium.Adapters.${VENDOR}.sln
-
-# 5. Initialise git and verify build
-git init
-git add .
-dotnet build -c Release
-dotnet test  -c Release
+# Single-model dev mode (uses your real provider API keys)
+export OPENAI_API_KEY=sk-...
+export ANTHROPIC_API_KEY=sk-ant-...
+litellm --model gpt-4o-mini --model claude-haiku-4.5
+# Listening on http://localhost:4000
 ```
 
-## What you still need to do per repo
+For production, point the proxy at a config file with virtual keys, fallbacks, rate limits, and
+observability. See [LiteLLM docs](https://docs.litellm.ai/docs/proxy/configs).
 
-After scaffolding :
+### 2. Install the adapter
 
-- **Author the actual adapter code.** Replace `LitellmAdapter` with the real implementation of whatever port (`IEventStore`, `IIdentityProvider`, `IBillingProvider`, `IEmailSender`, …) you're filling.
-- **NuGet publishing.** Add `NUGET_API_KEY` to repo secrets ; the included `release.yml` (TODO — add when first needed) packs and pushes on `v*` tags.
-- **Branch protection.** Require `build-test` (CI), at least one review, no force-push to `main`.
-- **Renovate or Dependabot.** Renovate config at `renovate.json` — track Compendium NuGets so a framework release auto-PRs the adapter. Dependabot for npm-style scheduled dep bumps.
-- **Integration tests** (optional but recommended for adapters with external systems). Add `tests/Integration/Compendium.Adapters.<Vendor>.IntegrationTests/` with `Testcontainers` if needed. Keep them out of the unit CI job.
-
-## Local-dev mode (when you're modifying both framework and adapter)
-
-Edit `Directory.Packages.props` to add a project reference instead of the NuGet :
-
-```xml
-<ItemGroup Condition="'$(LinkLocalCompendium)' == 'true'">
-  <PackageReference Remove="Compendium.Abstractions" />
-  <ProjectReference Include="../compendium/src/Abstractions/Compendium.Abstractions/Compendium.Abstractions.csproj" />
-</ItemGroup>
+```bash
+dotnet add package Compendium.Adapters.LiteLLM
 ```
 
-Then `dotnet build -p:LinkLocalCompendium=true`.
+### 3. Register the provider
 
-## Common pitfalls (read before pushing)
+```csharp
+using Compendium.Adapters.LiteLLM.DependencyInjection;
 
-- **Broken `Compendium.sln`** : every `Project("{...}")` MUST have a matching `EndProject` on the next non-empty line, and every GUID listed in `Project(...)` MUST appear in the `GlobalSection(ProjectConfigurationPlatforms)` (4 `.Debug|Any CPU.*` + `.Release|Any CPU.*` lines). Linux CI is strict ; macOS is lenient and will mask this bug. **Always** use `dotnet sln add` / `dotnet sln remove` instead of hand-editing the sln. Verify with `dotnet sln list && dotnet build -c Release` before pushing.
-- **`gh pr merge` from a detached worktree** : fails opaquely with "could not determine current branch". Always run merges from a checkout that's on a named branch (typically `main`).
-- **MinVer tag prefix** : pinned to `v` in `Directory.Build.props`. The first tag must continue the version sequence of the package's previous releases (e.g. if `Compendium.Adapters.Stripe` was last published as `1.0.0-preview.8` from the framework, the first tag here is `v1.0.0-preview.9`).
-- **No `--no-verify`, no `--force-push`** (use `--force-with-lease` instead). No version bumps in `Directory.Packages.props` outside of Renovate-managed PRs.
-- **Skill / commands** : `.claude/skills/compendium-test-author/SKILL.md` and `.claude/commands/{tests,coverage}.md` ship pre-baked. `/tests` and `/coverage` work out of the box in Claude Code.
+services.AddCompendiumLiteLLM(opt =>
+{
+    opt.BaseUrl     = "http://localhost:4000";        // your proxy
+    opt.VirtualKey  = "sk-litellm-team-eng";          // optional team key
+    opt.DefaultModel = "openai/gpt-4o-mini";          // provider-prefixed
+});
+```
+
+…or bind from configuration:
+
+```jsonc
+{
+  "LiteLLM": {
+    "BaseUrl": "https://litellm.internal/v1",
+    "VirtualKey": "sk-litellm-team-eng",
+    "DefaultModel": "openai/gpt-4o-mini",
+    "PassThroughHeaders": {
+      "x-litellm-tags": "env=prod,team=ai"
+    }
+  }
+}
+```
+
+```csharp
+services.AddCompendiumLiteLLM(builder.Configuration);
+```
+
+### 4. Use it
+
+```csharp
+public sealed class AssistantService(IAIProvider ai)
+{
+    public async Task<string> AnswerAsync(string question, CancellationToken ct)
+    {
+        var result = await ai.CompleteAsync(new CompletionRequest
+        {
+            Model = "anthropic/claude-haiku-4.5", // route this call to Anthropic
+            Messages = new() { Message.User(question) },
+            MaxTokens = 512
+        }, ct);
+
+        return result.IsSuccess
+            ? result.Value.Content
+            : $"AI error: {result.Error.Code}";
+    }
+}
+```
+
+The same `IAIProvider` instance can hit `openai/gpt-4o-mini`, `anthropic/claude-sonnet-4`,
+`bedrock/anthropic.claude-3-haiku`, `gemini/gemini-1.5-pro` — anything your proxy is configured
+for. Routing happens server-side; your code only changes the model id.
+
+See [`samples/01-multi-provider-routing`](samples/01-multi-provider-routing) for a runnable demo.
+
+## Configuration reference
+
+| Option | Default | Notes |
+|---|---|---|
+| `BaseUrl` | `http://localhost:4000` | Proxy base URL. |
+| `ApiKey` | `""` | Plain bearer credential. Optional — many self-hosted proxies run open. |
+| `VirtualKey` | `null` | LiteLLM virtual key (`sk-litellm-...`). Overrides `ApiKey` on the Authorization header. |
+| `DefaultModel` | `openai/gpt-4o-mini` | Provider-prefixed model id, applied when the request omits `Model`. |
+| `DefaultEmbeddingModel` | `openai/text-embedding-3-small` | Same convention for embeddings. |
+| `DefaultMaxTokens` | `4096` | Applied when the request omits `MaxTokens`. |
+| `TimeoutSeconds` | `120` | Per-request HTTP timeout. |
+| `RetryAttempts` | `3` | Used by the standard resilience handler. |
+| `EnableLogging` | `false` | Emits raw request/response JSON at debug level (do NOT enable in prod). |
+| `UseStructuredOutputsByDefault` | `false` | Forces `response_format = {"type":"json_object"}` on every call. |
+| `MaxEmbeddingsBatchSize` | `2048` | Inputs are chunked into batches no larger than this. |
+| `PassThroughHeaders` | `{}` | Case-insensitive map of extra headers forwarded on every outbound request (e.g. `x-litellm-cache-key`, `x-litellm-tags`). |
+
+### Pass-through headers — common LiteLLM primitives
+
+| Header | What it does |
+|---|---|
+| `x-litellm-cache-key` | Forces a cache key the proxy uses to dedupe identical prompts. |
+| `x-litellm-tags` | Tags this request in proxy logs / billing (`env=prod,team=ai`). |
+| `x-user-id` | Per-user budget accounting on the proxy side. |
+| Custom auth (mTLS proxies, internal ingress) | Anything your gateway expects. |
+
+The pass-through bag is case-insensitive and is **silently overridden** by the configured
+`ApiKey` / `VirtualKey` for the `Authorization` header — you can't shoot yourself in the foot by
+clobbering credentials from configuration.
+
+## Tool / function calling
+
+```csharp
+using Compendium.Adapters.LiteLLM.Tools;
+
+var tools = new List<AgentTool>
+{
+    new("get_weather", "Returns the weather for a city.",
+        """{"type":"object","properties":{"city":{"type":"string"}},"required":["city"]}""")
+};
+
+var request = new CompletionRequest
+{
+    Model = "openai/gpt-4o-mini",
+    Messages = new() { Message.User("What's the weather in Paris?") }
+}.WithTools(tools, toolChoice: "auto");
+
+var result = await ai.CompleteAsync(request);
+
+foreach (var call in result.Value.GetToolCalls())
+{
+    Console.WriteLine($"{call.ToolName}({call.ArgumentsJson})");
+}
+```
+
+Whether a given upstream model honours the tool list depends on the model. The LiteLLM proxy
+passes the OpenAI-style `tools` / `tool_choice` fields straight through.
+
+## Structured outputs
+
+```csharp
+using Compendium.Adapters.LiteLLM.StructuredOutputs;
+
+var schema = """
+{ "type":"object","properties":{"answer":{"type":"string"}},"required":["answer"] }
+""";
+
+var result = await ai.CompleteAsync(
+    new CompletionRequest { Model = "openai/gpt-4o-mini", Messages = [...] }
+        .WithStructuredOutput(schema, schemaName: "Answer", strict: true));
+```
+
+…or plain JSON mode:
+
+```csharp
+var result = await ai.CompleteAsync(request.WithJsonMode());
+```
+
+## Production checklist
+
+- [ ] **TLS termination** — never run the proxy on plain HTTP across a public network. Front it
+  with NGINX / Envoy / your cloud LB.
+- [ ] **Virtual-key rotation** — rotate `sk-litellm-...` keys per team on a schedule. They live in
+  your proxy DB; the adapter just forwards them as `Authorization: Bearer`.
+- [ ] **Observability** — turn on LiteLLM's Langfuse / Helicone / Prometheus hooks server-side.
+  Do NOT set `EnableLogging = true` in prod — that dumps raw prompts to your app logs.
+- [ ] **Per-tenant tagging** — set `x-litellm-tags` via `PassThroughHeaders` so per-tenant spend
+  is queryable on the proxy.
+- [ ] **Budget caps** — configure proxy-side budget limits per virtual key. The adapter surfaces
+  402 / `AI.InsufficientCredits` when a key is over budget.
+- [ ] **Fallbacks** — define provider fallbacks (`openai/gpt-4o-mini` → `azure/gpt-4o-mini`) in
+  the proxy config; the adapter is unaware and benefits automatically.
+
+## Error mapping
+
+| HTTP | Error code | Notes |
+|---|---|---|
+| 401 | `AI.InvalidApiKey` | Wrong `ApiKey` / `VirtualKey`. |
+| 402 | `AI.InsufficientCredits` | Proxy-side budget exhausted. |
+| 404 | `AI.ModelNotFound` | Model id not declared in the proxy config. |
+| 429 | `AI.RateLimitExceeded` | Per-key or per-model rate limit. |
+| 5xx | `AI.ProviderError` | Upstream failure surfaced by the proxy. |
+| timeout | `AI.Timeout` | Caller-cancelled `CancellationToken` rethrows; HttpClient timeout maps. |
+
+Caller cancellation always re-throws `TaskCanceledException` so the surrounding code knows the
+shutdown wasn't a server-side fault.
+
+## Development
+
+```bash
+dotnet build  -c Release
+dotnet test   -c Release --filter "FullyQualifiedName!~IntegrationTests"
+```
+
+CI gate: ≥ 90 % line coverage. The unit tests use `RichardSzalay.MockHttp` — no LiteLLM proxy
+required to run them. The optional integration tests (skipped when `LITELLM_BASE_URL` is unset)
+exercise the real proxy.
 
 ## License
 

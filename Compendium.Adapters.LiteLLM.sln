@@ -1,0 +1,48 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{18094B26-A74C-4CC2-8765-42C0AD2B7494}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Compendium.Adapters.LiteLLM", "src\Compendium.Adapters.LiteLLM\Compendium.Adapters.LiteLLM.csproj", "{ABE90EF3-57A0-4DFB-BCA2-C459BC58D208}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{52D6BD9B-18A1-42E8-979B-58C5D1900811}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Unit", "Unit", "{F7A205FE-5DDD-4CAE-BED6-2C5D8AD07B33}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Compendium.Adapters.LiteLLM.Tests", "tests\Unit\Compendium.Adapters.LiteLLM.Tests\Compendium.Adapters.LiteLLM.Tests.csproj", "{F63D497F-C0A2-4187-ABAD-E8E51023FA41}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "samples", "samples", "{9BAD03CB-7BE3-4AF6-904D-C98A1DA37CAD}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Compendium.Adapters.LiteLLM.Sample.MultiProviderRouting", "samples\01-multi-provider-routing\Compendium.Adapters.LiteLLM.Sample.MultiProviderRouting.csproj", "{14F01574-EEB8-4AF3-9BDC-A99CC10BB955}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{ABE90EF3-57A0-4DFB-BCA2-C459BC58D208}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{ABE90EF3-57A0-4DFB-BCA2-C459BC58D208}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{ABE90EF3-57A0-4DFB-BCA2-C459BC58D208}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{ABE90EF3-57A0-4DFB-BCA2-C459BC58D208}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F63D497F-C0A2-4187-ABAD-E8E51023FA41}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F63D497F-C0A2-4187-ABAD-E8E51023FA41}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F63D497F-C0A2-4187-ABAD-E8E51023FA41}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F63D497F-C0A2-4187-ABAD-E8E51023FA41}.Release|Any CPU.Build.0 = Release|Any CPU
+		{14F01574-EEB8-4AF3-9BDC-A99CC10BB955}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{14F01574-EEB8-4AF3-9BDC-A99CC10BB955}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{14F01574-EEB8-4AF3-9BDC-A99CC10BB955}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{14F01574-EEB8-4AF3-9BDC-A99CC10BB955}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{ABE90EF3-57A0-4DFB-BCA2-C459BC58D208} = {18094B26-A74C-4CC2-8765-42C0AD2B7494}
+		{F7A205FE-5DDD-4CAE-BED6-2C5D8AD07B33} = {52D6BD9B-18A1-42E8-979B-58C5D1900811}
+		{F63D497F-C0A2-4187-ABAD-E8E51023FA41} = {F7A205FE-5DDD-4CAE-BED6-2C5D8AD07B33}
+		{14F01574-EEB8-4AF3-9BDC-A99CC10BB955} = {9BAD03CB-7BE3-4AF6-904D-C98A1DA37CAD}
+	EndGlobalSection
+EndGlobal

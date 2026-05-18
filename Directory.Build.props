@@ -9,6 +9,9 @@
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
 
+    <!-- Default: src/ projects pack as NuGet. Test projects opt out via their own csproj. -->
+    <IsPackable>true</IsPackable>
+
     <!-- NuGet metadata defaults — override per project as needed -->
     <Authors>Sassy Solutions</Authors>
     <Company>Sassy Solutions</Company>
